@@ -1,13 +1,9 @@
 package hellojpa;
 
-import com.sun.istack.internal.NotNull;
+import org.hibernate.Hibernate;
+import org.hibernate.proxy.HibernateProxy;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-import java.time.LocalDateTime;
-import java.util.List;
+import javax.persistence.*;
 
 /**
  * description
@@ -17,7 +13,6 @@ import java.util.List;
 public class JpaMain {
   public static void main(String[] args) {
     EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
-
     //1차 캐시(영속성 컨텍스트)
     EntityManager em = emf.createEntityManager();
 
@@ -25,24 +20,115 @@ public class JpaMain {
     // 엔티티 매니저는 데이터 변경시 트랙잭션을 시작해야한다.
     tx.begin();   // [트랜잭션] 시작
 
-
     try {
-      Member member = new Member();
-      member.setCreateBy("Kim");
-      member.setCreateDate(LocalDateTime.now());
-
-
-      em.persist(member);
+// • 프록시 인스턴스의 초기화 여부 확인 PersistenceUnitUtil.isLoaded(Object entity)
+// • 프록시 클래스 확인 방법 entity.getClass().getName() 출력(..javasist.. or HibernateProxy…)
+// • 프록시 강제 초기화 org.hibernate.Hibernate.initialize(entity);
+// • 참고: JPA 표준은 강제 초기화 없음 강제 호출: member.getName()
+      Member member1 = new Member();
+      member1.setUsername("member1");
+      em.persist(member1);
 
       em.flush();
       em.clear();
 
-      Movie findMovie = em.find(Movie.class, member.getId());
-      System.out.println("findMovie = " + findMovie);
+      Member refMember = em.getReference(Member.class, member1.getId());
+      System.out.println("refMember = " + refMember.getClass());    //Proxy
+//      refMember.getUsername();  // 강제 초기화
+      // • 프록시 강제 초기화 org.hibernate.Hibernate.initialize(entity);
+      Hibernate.initialize(refMember);  // 강제초기화
+
+      // • 프록시 인스턴스의 초기화 여부 확인 PersistenceUnitUtil.isLoaded(Object entity)
+//      System.out.println("isLoaded = " + emf.getPersistenceUnitUtil().isLoaded(refMember));
+
+//• 영속성 컨텍스트의 도움을 받을 수 없는 준영속 상태일 때, 프록시를 초기화하면 문제 발생
+//  (하이버네이트는 org.hibernate.LazyInitializationException 예외를 터트림)
+      /*Member member1 = new Member();
+      member1.setUsername("member1");
+      em.persist(member1);
+
+      em.flush();
+      em.clear();
+
+      Member refMember = em.getReference(Member.class, member1.getId());
+      System.out.println("refMember = " + refMember.getClass());    //Proxy
+
+//      em.detach(refMember);
+//      em.close();
+      em.clear();
+      
+      refMember.getUsername();*/
+
+//• 영속성 컨텍스트에 찾는 엔티티가 이미 있으면 em.getReference()를 호출해도 실제 엔티티 반환
+      /*Member member1 = new Member();
+      member1.setUsername("member1");
+      em.persist(member1);
+
+      em.flush();
+      em.clear();
+
+      Member refMember = em.getReference(Member.class, member1.getId());
+      System.out.println("refMember = " + refMember.getClass());    //Proxy
+
+      Member findMember = em.find(Member.class, member1.getId());
+      System.out.println("findMember = " + findMember.getClass());  //Member
+
+      System.out.println("refMember == findMember: " + (refMember == findMember));*/
+
+// 프록시 객체는 원본 엔티티를 상속받음, 따라서 타입 체크시 주의해야함 (== 비교 실패, 대신 instance of 사용)
+      /*Member member1 = new Member();
+      member1.setUsername("member1");
+      em.persist(member1);
+
+
+      em.flush();
+      em.clear();
+
+      Member m1 = em.find(Member.class, member1.getId());
+      System.out.println("m1 = " + m1.getClass());
+
+      Member reference = em.getReference(Member.class, member1.getId());
+      System.out.println("reference.getClass() = " + reference.getClass());
+
+      System.out.println("a == a: " + (m1 == reference));*/
+
+      //• em.find() vs em.getReference()
+      //• em.find(): 데이터베이스를 통해서 실제 엔티티 객체 조회
+      //• em.getReference(): 데이터베이스 조회를 미루는 가짜(프록시) 엔티티 객체 조회
+      /*      Member member1 = new Member();
+      member1.setUsername("member1");
+      em.persist(member1);
+
+      Member member2 = new Member();
+      member2.setUsername("member2");
+      em.persist(member2);
+
+      em.flush();
+      em.clear();
+
+      // 프록시 TYPE비교 TRUE
+      Member m1 = em.getReference(Member.class, member1.getId());
+      Member m2 = em.getReference(Member.class, member2.getId());
+      System.out.println("m1 == m2 : " + (m1.getClass() == m2.getClass()));
+
+      //프록시 TYPE비교 FALSE 그래서 == 비교는안되고 instanceof로 비교해야함
+      Member m3 = em.find(Member.class, member1.getId());
+      Member m4 = em.getReference(Member.class, member2.getId());
+      System.out.println("m3 == m4 : " + (m3.getClass() == m4.getClass()));
+      System.out.println("m3 == m4 : " + (m3 instanceof Member));
+      System.out.println("m3 == m4 : " + (m4 instanceof Member));*/
+
+      //      System.out.println("findMember.getId() = " + findMember.getId());
+      //      System.out.println("before findMember = " + findMember.getClass());
+      //      System.out.println("findMember.getUsername() = " + findMember.getUsername());
+      //      System.out.println("after findMember = " + findMember.getClass());
+
+
 
       tx.commit();  // [트랜잭션] 커밋
     } catch (Exception e) {
       tx.rollback();
+      e.printStackTrace();
     } finally {
       em.close();
     }
@@ -50,16 +136,68 @@ public class JpaMain {
 
   }
 
-  @NotNull
-  private static Member saveMember(EntityManager em) {
-    Member member = new Member();
-    member.setUsername("member1");
+  private static void pritMember(Member member) {
+    System.out.println("member = " + member.getUsername());
+  }
 
-    em.persist(member);
-    return member;
+  private static void pritMemberAndTeam(Member member) {
+    String username = member.getUsername();
+    System.out.println("username = " + username);
+
+    Team team = member.getTeam();
+    System.out.println("team.getName() = " + team.getName());
+
+
   }
 
 }
+
+//7강 고급매핑
+//public class JpaMain {
+//  public static void main(String[] args) {
+//    EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
+//
+//    //1차 캐시(영속성 컨텍스트)
+//    EntityManager em = emf.createEntityManager();
+//
+//    EntityTransaction tx = em.getTransaction();
+//    // 엔티티 매니저는 데이터 변경시 트랙잭션을 시작해야한다.
+//    tx.begin();   // [트랜잭션] 시작
+//
+//
+//    try {
+//      Member member = new Member();
+//      member.setCreateBy("Kim");
+//      member.setCreateDate(LocalDateTime.now());
+//
+//      em.persist(member);
+//
+//      em.flush();
+//      em.clear();
+//
+//      Movie findMovie = em.find(Movie.class, member.getId());
+//      System.out.println("findMovie = " + findMovie);
+//
+//      tx.commit();  // [트랜잭션] 커밋
+//    } catch (Exception e) {
+//      tx.rollback();
+//    } finally {
+//      em.close();
+//    }
+//    emf.close();
+//
+//  }
+//
+//  @NotNull
+//  private static Member saveMember(EntityManager em) {
+//    Member member = new Member();
+//    member.setUsername("member1");
+//
+//    em.persist(member);
+//    return member;
+//  }
+//
+//}
 
 // 4 엔티티 매핑
 //public class JpaMain {
