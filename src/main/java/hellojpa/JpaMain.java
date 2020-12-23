@@ -21,11 +21,50 @@ public class JpaMain {
     tx.begin();   // [트랜잭션] 시작
 
     try {
+      //프록시와 연관관계 관리 - 3.즉시로딩과 지연로딩
+      Child child1 = new Child();
+      Child child2 = new Child();
+
+      Parent parent = new Parent();
+      parent.addChild(child1);
+      parent.addChild(child2);
+
+      em.persist(parent);
+
+      em.flush();
+      em.clear();
+
+      Parent findParent = em.find(Parent.class, parent.getId());
+      findParent.getChildList().remove(0);
+
+      //프록시와 연관관계 관리 - 2.즉시로딩과 지연로딩
+      /*Team team = new Team();
+      team.setName("teamA");
+      em.persist(team);
+
+      Member member1 = new Member();
+      member1.setUsername("member1");
+      member1.setTeam(team);
+      em.persist(member1);
+
+      em.flush();
+      em.clear();
+
+      Member m = em.find(Member.class, member1.getId());
+
+      System.out.println("m.getTeam().getClass() = " + m.getTeam().getClass());
+
+      System.out.println("=====================");
+      System.out.println("m.getTeam().getName(); = " + m.getTeam().getName());  //초기화 발생
+      System.out.println("=====================");*/
+
+
+    //프록시와 연관관계 관리 - 1.프록시
 // • 프록시 인스턴스의 초기화 여부 확인 PersistenceUnitUtil.isLoaded(Object entity)
 // • 프록시 클래스 확인 방법 entity.getClass().getName() 출력(..javasist.. or HibernateProxy…)
 // • 프록시 강제 초기화 org.hibernate.Hibernate.initialize(entity);
 // • 참고: JPA 표준은 강제 초기화 없음 강제 호출: member.getName()
-      Member member1 = new Member();
+      /*Member member1 = new Member();
       member1.setUsername("member1");
       em.persist(member1);
 
@@ -36,9 +75,9 @@ public class JpaMain {
       System.out.println("refMember = " + refMember.getClass());    //Proxy
 //      refMember.getUsername();  // 강제 초기화
       // • 프록시 강제 초기화 org.hibernate.Hibernate.initialize(entity);
-      Hibernate.initialize(refMember);  // 강제초기화
+      Hibernate.initialize(refMember);  // 강제초기화*/
 
-      // • 프록시 인스턴스의 초기화 여부 확인 PersistenceUnitUtil.isLoaded(Object entity)
+// • 프록시 인스턴스의 초기화 여부 확인 PersistenceUnitUtil.isLoaded(Object entity)
 //      System.out.println("isLoaded = " + emf.getPersistenceUnitUtil().isLoaded(refMember));
 
 //• 영속성 컨텍스트의 도움을 받을 수 없는 준영속 상태일 때, 프록시를 초기화하면 문제 발생
